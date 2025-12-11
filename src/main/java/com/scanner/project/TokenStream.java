@@ -1,4 +1,5 @@
 package com.scanner.project;
+
 // TokenStream.java
 
 // Implementation of the Scanner for KAY
@@ -87,10 +88,13 @@ public class TokenStream {
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
 					nextChar = readChar();
+				} else {
+					// Single '=' is not a valid operator in KAY, mark as Other
+					t.setType("Other");
 				}
 				return t;
 			case '!':
-				// !=
+				// != or just !
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
@@ -138,7 +142,7 @@ public class TokenStream {
 			}
 		}
 
-		// Then check for a separator
+		// Then check for a separator (including comma)
 		if (isSeparator(nextChar)) {
 			t.setType("Separator");
 			t.setValue(t.getValue() + nextChar);
@@ -241,8 +245,8 @@ public class TokenStream {
 	}
 
 	private boolean isSeparator(char c) {
-		// Separators in KAY: { } ; ( )
-		return (c == '{' || c == '}' || c == ';' || c == '(' || c == ')');
+		// Separators in KAY: { } ; ( ) ,
+		return (c == '{' || c == '}' || c == ';' || c == '(' || c == ')' || c == ',');
 	}
 
 	private boolean isOperator(char c) {
@@ -264,10 +268,4 @@ public class TokenStream {
 	public boolean isEndofFile() {
 		return isEof;
 	}
-}
-
-	public boolean isEndofFile() {
-		return isEof;
-	}
-
 }
