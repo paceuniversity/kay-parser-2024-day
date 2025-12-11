@@ -1,8 +1,6 @@
 package com.scanner.project;
 
-// TokenStream.java
-
-// Implementation of the Scanner for KAY
+// scanner for KAY language
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -11,18 +9,14 @@ import java.io.IOException;
 
 public class TokenStream {
 
-	// Instance variables 
-	private boolean isEof = false; // is end of file
-	private char nextChar = ' '; // next character in input stream
+	private boolean isEof = false;
+	private char nextChar = ' ';
 	private BufferedReader input;
 
-	// This function was added to make the demo file work
 	public boolean isEoFile() {
 		return isEof;
 	}
 
-	// Constructor
-	// Pass a filename for the program text as a source for the TokenStream.
 	public TokenStream(String fileName) {
 		try {
 			input = new BufferedReader(new FileReader(fileName));
@@ -32,42 +26,37 @@ public class TokenStream {
 		}
 	}
 
-	public Token nextToken() { // Main function of the scanner
-								// Return next token type and value.
+	// main scanning function - returns the next token from input
+	public Token nextToken() {
 		Token t = new Token();
-		t.setType("Other"); // For now it is Other
+		t.setType("Other");
 		t.setValue("");
 
-		// First check for whitespaces and bypass them
 		skipWhiteSpace();
 
-		// Then check for a comment, and bypass it
-		// but remember that / may also be a division operator.
+		// skip over comments
 		while (nextChar == '/') {
 			nextChar = readChar();
-			if (nextChar == '/') { // If / is followed by another /
-				// skip rest of line - it's a comment.
-				// look for <cr>, <lf>, <ff>
+			if (nextChar == '/') {
+				// rest of line is a comment
 				while (!isEof && !isEndOfLine(nextChar)) {
 					nextChar = readChar();
 				}
 				skipWhiteSpace();
 			} else {
-				// A slash followed by anything else must be an operator.
+				// just a division operator
 				t.setValue("/");
 				t.setType("Operator");
 				return t;
 			}
 		}
 
-		// Then check for an operator; this part of the code should recover 2-character
-		// operators as well as 1-character ones.
+		// check for two-char and one-char operators
 		if (isOperator(nextChar)) {
 			t.setType("Operator");
 			t.setValue(t.getValue() + nextChar);
 			switch (nextChar) {
 			case '<':
-				// <= or <>
 				nextChar = readChar();
 				if (nextChar == '=' || nextChar == '>') {
 					t.setValue(t.getValue() + nextChar);
@@ -75,7 +64,6 @@ public class TokenStream {
 				}
 				return t;
 			case '>':
-				// >=
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
@@ -83,18 +71,16 @@ public class TokenStream {
 				}
 				return t;
 			case '=':
-				// == or single = (which is Other/invalid in KAY)
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
 					nextChar = readChar();
 				} else {
-					// Single '=' is not a valid operator in KAY
+					// single = is not valid in KAY
 					t.setType("Other");
 				}
 				return t;
 			case '!':
-				// != or just !
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
@@ -102,7 +88,6 @@ public class TokenStream {
 				}
 				return t;
 			case ':':
-				// := (assignment operator in KAY)
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
@@ -113,7 +98,6 @@ public class TokenStream {
 					return t;
 				}
 			case '|':
-				// Look for ||
 				nextChar = readChar();
 				if (nextChar == '|') {
 					t.setValue(t.getValue() + nextChar);
@@ -123,9 +107,7 @@ public class TokenStream {
 					t.setType("Other");
 				}
 				return t;
-
 			case '&':
-				// Look for &&
 				nextChar = readChar();
 				if (nextChar == '&') {
 					t.setValue(t.getValue() + nextChar);
@@ -135,14 +117,13 @@ public class TokenStream {
 					t.setType("Other");
 				}
 				return t;
-
-			default: // all other operators: +, -, *, /
+			default:
 				nextChar = readChar();
 				return t;
 			}
 		}
 
-		// Then check for a separator (including comma for multi-variable declarations)
+		// separators like { } ( ) ; ,
 		if (isSeparator(nextChar)) {
 			t.setType("Separator");
 			t.setValue(t.getValue() + nextChar);
@@ -150,35 +131,32 @@ public class TokenStream {
 			return t;
 		}
 
-		// Then check for an identifier, keyword, or literal.
+		// identifiers and keywords start with a letter
 		if (isLetter(nextChar)) {
-			// Set to an identifier
 			t.setType("Identifier");
 			while ((isLetter(nextChar) || isDigit(nextChar))) {
 				t.setValue(t.getValue() + nextChar);
 				nextChar = readChar();
 			}
-			// now see if this is a keyword
+			// check if its actually a keyword
 			if (isKeyword(t.getValue())) {
 				t.setType("Keyword");
 			} else if (t.getValue().equals("True") || t.getValue().equals("False")) {
-				// In KAY, True and False are uppercased literals
 				t.setType("Literal");
 			}
-			if (isEndOfToken(nextChar)) { // If token is valid, returns.
+			if (isEndOfToken(nextChar)) {
 				return t;
 			}
 		}
 
-		if (isDigit(nextChar)) { // check for integer literals
+		// numbers
+		if (isDigit(nextChar)) {
 			t.setType("Literal");
 			while (isDigit(nextChar)) {
 				t.setValue(t.getValue() + nextChar);
 				nextChar = readChar();
 			}
-			// An Integer-Literal is to be only followed by a space,
-			// an operator, or a separator.
-			if (isEndOfToken(nextChar)) {// If token is valid, returns.
+			if (isEndOfToken(nextChar)) {
 				return t;
 			} 
 		}
@@ -189,13 +167,12 @@ public class TokenStream {
 			return t;
 		}
 
-		// Makes sure that the whole unknown token (Type: Other) is printed.
+		// grab the rest of an unknown token
 		while (!isEndOfToken(nextChar)) {
 			t.setValue(t.getValue() + nextChar);
 			nextChar = readChar();
 		}
 		
-		// Finally check for whitespaces and bypass them
 		skipWhiteSpace();
 
 		return t;
@@ -219,8 +196,6 @@ public class TokenStream {
 	}
 
 	private boolean isKeyword(String s) {
-		// Keywords in KAY: main, if, else, while, integer, bool
-		// Note: void is NOT a keyword in KAY
 		return s.equals("main") || s.equals("if") || s.equals("else") || 
 		       s.equals("while") || s.equals("integer") || s.equals("bool");
 	}
@@ -233,25 +208,21 @@ public class TokenStream {
 		return (c == '\r' || c == '\n' || c == '\f');
 	}
 
-	private boolean isEndOfToken(char c) { // Is the value a separate token?
+	private boolean isEndOfToken(char c) {
 		return (isWhiteSpace(nextChar) || isOperator(nextChar) || isSeparator(nextChar) || isEof);
 	}
 
 	private void skipWhiteSpace() {
-		// check for whitespaces, and bypass them
 		while (!isEof && isWhiteSpace(nextChar)) {
 			nextChar = readChar();
 		}
 	}
 
 	private boolean isSeparator(char c) {
-		// Separators in KAY: { } ; ( ) ,
 		return (c == '{' || c == '}' || c == ';' || c == '(' || c == ')' || c == ',');
 	}
 
 	private boolean isOperator(char c) {
-		// Checks for characters that start operators
-		// Operators in KAY: + - * / < <= > >= == != && || ! :=
 		return (c == '+' || c == '-' || c == '*' || c == '/' || 
 		        c == '<' || c == '>' || c == '=' || c == '!' || 
 		        c == '&' || c == '|' || c == ':');
