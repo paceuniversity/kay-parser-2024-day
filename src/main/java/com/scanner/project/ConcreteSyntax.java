@@ -49,6 +49,7 @@ public class ConcreteSyntax {
 	}
 	
 	// Declarations = { Declaration }
+	// Declaration can have multiple identifiers: Type Identifier { , Identifier } ;
 	private Declarations declarations() {
 		Declarations ds = new Declarations();
 		
@@ -58,7 +59,6 @@ public class ConcreteSyntax {
 			// Get the type first
 			Type t = type();
 			
-			// Now handle one or more identifiers separated by commas
 			// First identifier
 			Declaration d = new Declaration();
 			d.t = t;
