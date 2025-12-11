@@ -158,11 +158,11 @@ public class TokenStream {
 			}
 			if (isEndOfToken(nextChar)) {
 				return t;
-			} 
+			}
 		}
 
 		t.setType("Other");
-		
+
 		if (isEof) {
 			return t;
 		}
@@ -172,7 +172,7 @@ public class TokenStream {
 			t.setValue(t.getValue() + nextChar);
 			nextChar = readChar();
 		}
-		
+
 		skipWhiteSpace();
 
 		return t;
@@ -196,7 +196,7 @@ public class TokenStream {
 	}
 
 	private boolean isKeyword(String s) {
-		return s.equals("main") || s.equals("if") || s.equals("else") || 
+		return s.equals("main") || s.equals("if") || s.equals("else") ||
 		       s.equals("while") || s.equals("integer") || s.equals("bool");
 	}
 
@@ -223,8 +223,8 @@ public class TokenStream {
 	}
 
 	private boolean isOperator(char c) {
-		return (c == '+' || c == '-' || c == '*' || c == '/' || 
-		        c == '<' || c == '>' || c == '=' || c == '!' || 
+		return (c == '+' || c == '-' || c == '*' || c == '/' ||
+		        c == '<' || c == '>' || c == '=' || c == '!' ||
 		        c == '&' || c == '|' || c == ':');
 	}
 
