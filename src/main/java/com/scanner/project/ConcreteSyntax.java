@@ -1,290 +1,360 @@
 package com.scanner.project;
 // ConcreteSyntax.java
 
-// Implementation of the Recursive Descent Parser algorithm
-
-//  Each method corresponds to a concrete syntax grammar rule, 
-// which appears as a comment at the beginning of the method.
-
-// This code DOES NOT implement a parser for KAY. You have to complete
-// the code and also make sure it implements a parser for KAY - not something
-// else, not more, not less.
+// Implements the parser for KAY language
 
 public class ConcreteSyntax {
-
-	// READ THE COMPLETE FILE FIRST
 	
-	// Instance variables
-	public Token token; // current token that is considered from the input stream
-	public TokenStream input; // stream of tokens generated in by the lexical analysis
-
-	// Constructor
-	public ConcreteSyntax(TokenStream ts) { // Open the source program
-		input = ts; // as a TokenStream, and
-		token = input.nextToken(); // retrieve its first Token
+	private TokenStream tokens;
+	private Token token;
+	
+	public ConcreteSyntax(TokenStream ts) {
+		tokens = ts;
+		token = tokens.nextToken();
 	}
-
-	// Method that prints a syntax error message
-	private String SyntaxError(String tok) {
-		String s = "Syntax error - Expecting: " + tok + " But saw: "
-				+ token.getType() + " = " + token.getValue();
-		System.out.println(s);
-		return s;
-		// System.exit(0);
-	}
-
-	// Match a string with the value of a token. If no problem, go to the next
-	// token otherwise generate an error message
-	private void match(String s) {
-		if (token.getValue().equals(s))
-			token = input.nextToken();
-		else
-			throw new RuntimeException(SyntaxError(s));
-	}
-
-	// Implementation of the Recursive Descent Parser
-
-	public Program program() {
-		// TODO TO BE COMPLETED 
-		// Program --> main '{' Declarations Statements '}'
-		String[] header = { };
-		Program p = new Program();
-		for (int i = 0; i < header.length; i++)
-			// bypass " main { "
-			match(header[i]);
-			// add the required code
-		return p;
-	}
-
-	private Declarations declarations() {
-		// TODO TO BE COMPLETED 
-		// Declarations --> { Declaration }*
-		Declarations ds = new Declarations();
-		while (token.getValue().equals("integer")
-				|| token.getValue().equals("bool")) {
-			declaration(ds);
+	
+	// Match a token and advance to the next one
+	private void match(String expectedType, String expectedValue) {
+		if (token.getType().equals(expectedType) && token.getValue().equals(expectedValue)) {
+			token = tokens.nextToken();
+		} else {
+			throw new RuntimeException("Syntax error - Expecting: " + expectedValue + 
+			                         " But saw: " + token.getType() + " = " + token.getValue());
 		}
+	}
+	
+	// Match just a type
+	private void match(String expectedType) {
+		if (token.getType().equals(expectedType)) {
+			token = tokens.nextToken();
+		} else {
+			throw new RuntimeException("Syntax error - Expecting type: " + expectedType + 
+			                         " But saw: " + token.getType() + " = " + token.getValue());
+		}
+	}
+	
+	// Program = main { Declarations Statements }
+	public Program program() {
+		match("Keyword", "main");
+		match("Separator", "{");
+		
+		Program prog = new Program();
+		prog.decpart = declarations();
+		prog.body = statements();
+		
+		match("Separator", "}");
+		
+		return prog;
+	}
+	
+	// Declarations = { Declaration }
+	private Declarations declarations() {
+		Declarations ds = new Declarations();
+		
+		// Keep reading declarations while we see type keywords
+		while (token.getType().equals("Keyword") && 
+		       (token.getValue().equals("integer") || token.getValue().equals("bool"))) {
+			Declaration d = declaration();
+			ds.add(d);
+		}
+		
 		return ds;
 	}
-
-	private void declaration(Declarations ds) {
-		// Declaration --> Type Identifiers ;
-		Type t = type();
-		identifiers(ds, t);
-		match(";");
+	
+	// Declaration = Type Identifier ;
+	private Declaration declaration() {
+		Declaration d = new Declaration();
+		d.t = type();
+		d.v = new Variable();
+		d.v.id = token.getValue();
+		match("Identifier");
+		match("Separator", ";");
+		
+		return d;
 	}
-
+	
+	// Type = integer | bool
 	private Type type() {
-		// TODO CHECK THE CODE BELOW AND CHANGE IT IF NECESSARY
-		// Type --> integer | bool
-		Type t = null;
-		if (token.getValue().equals("integer"))
-			t = new Type(token.getValue());
-		else if (token.getValue().equals("bool"))
-			t = new Type(token.getValue());
-		else
-			throw new RuntimeException(SyntaxError("int | boolean"));
-		token = input.nextToken(); // pass over the type
+		Type t;
+		if (token.getValue().equals("integer")) {
+			t = new Type(Type.INTEGER);
+			match("Keyword", "integer");
+		} else if (token.getValue().equals("bool")) {
+			t = new Type(Type.BOOLEAN);
+			match("Keyword", "bool");
+		} else {
+			throw new RuntimeException("Syntax error - Expecting type (integer or bool) but saw: " + 
+			                         token.getType() + " = " + token.getValue());
+		}
 		return t;
 	}
-
-	private void identifiers(Declarations ds, Type t) {
-		// Identifiers --> Identifier { , Identifier }*
-		Declaration d = new Declaration(); // first declaration
-		d.t = t; // its type
-		if (token.getType().equals("Identifier")) {
-			d.v = new Variable();
-			d.v.id = token.getValue(); // its value
-			ds.addElement(d);
-			token = input.nextToken();
-			while (token.getValue().equals(",")) {
-				d = new Declaration(); // next declaration
-				d.t = t; // its type
-				token = input.nextToken();
-				if (token.getType().equals("Identifier")) {
-					d.v = new Variable(); // its value
-					d.v.id = token.getValue();
-					ds.addElement(d);
-					token = input.nextToken(); // get "," or ";"
-				} else
-					throw new RuntimeException(SyntaxError("Identifier"));
-			}
-		} else
-			throw new RuntimeException(SyntaxError("Identifier"));
-	}
-
-	private Statement statement() {
-		// Statement --> ; | Block | Assignment | IfStatement | WhileStatement
-		Statement s = new Skip();
-		if (token.getValue().equals(";")) { // Skip
-			token = input.nextToken();
-			return s;
-		} else if (token.getValue().equals("{")) { // Block
-			token = input.nextToken();
-			s = statements();
-			match("}");
-		} else if (token.getValue().equals("if")) // IfStatement
-			s = ifStatement();
-		else if (token.getValue().equals("while")) { // WhileStatement
-			// TODO TO BE COMPLETED
-		} else if (token.getType().equals("Identifier")) { // Assignment
-			// TODO TO BE COMPLETED
-		} else
-			throw new RuntimeException(SyntaxError("Statement"));
-		return s;
-	}
-
+	
+	// Statements = { Statement }
 	private Block statements() {
-		// Block --> '{' Statements '}'
 		Block b = new Block();
+		
+		// Keep reading statements while we don't see a closing brace
 		while (!token.getValue().equals("}")) {
-			b.blockmembers.addElement(statement());
+			Statement s = statement();
+			b.blockmembers.add(s);
 		}
+		
 		return b;
 	}
-
+	
+	// Statement = Block | Assignment | IfStatement | WhileStatement
+	private Statement statement() {
+		Statement s;
+		
+		if (token.getValue().equals("{")) {
+			s = block();
+		} else if (token.getValue().equals("if")) {
+			s = ifStatement();
+		} else if (token.getValue().equals("while")) {
+			s = whileStatement();
+		} else if (token.getType().equals("Identifier")) {
+			s = assignment();
+		} else {
+			throw new RuntimeException("Syntax error in statement - saw: " + 
+			                         token.getType() + " = " + token.getValue());
+		}
+		
+		return s;
+	}
+	
+	// Block = { Statements }
+	private Block block() {
+		match("Separator", "{");
+		Block b = statements();
+		match("Separator", "}");
+		return b;
+	}
+	
+	// Assignment = Identifier := Expression ;
 	private Assignment assignment() {
-		// Assignment --> Identifier := Expression ;
 		Assignment a = new Assignment();
-		if (token.getType().equals("Identifier")) {
-			// TODO TO BE COMPLETED
-		} else
-			throw new RuntimeException(SyntaxError("Identifier"));
+		a.target = new Variable();
+		a.target.id = token.getValue();
+		match("Identifier");
+		match("Operator", ":=");
+		a.source = expression();
+		match("Separator", ";");
+		
 		return a;
 	}
-
+	
+	// IfStatement = if ( Expression ) Statement [ else Statement ]
+	private Conditional ifStatement() {
+		Conditional c = new Conditional();
+		match("Keyword", "if");
+		match("Separator", "(");
+		c.test = expression();
+		match("Separator", ")");
+		c.thenbranch = statement();
+		
+		// Check for optional else branch
+		if (token.getType().equals("Keyword") && token.getValue().equals("else")) {
+			match("Keyword", "else");
+			c.elsebranch = statement();
+		}
+		
+		return c;
+	}
+	
+	// WhileStatement = while ( Expression ) Statement
+	private Loop whileStatement() {
+		Loop l = new Loop();
+		match("Keyword", "while");
+		match("Separator", "(");
+		l.test = expression();
+		match("Separator", ")");
+		l.body = statement();
+		
+		return l;
+	}
+	
+	// Expression = Conjunction { || Conjunction }
 	private Expression expression() {
-		// Expression --> Conjunction { || Conjunction }*
-		Binary b;
-		Expression e;
-		e = conjunction();
-		while (token.getValue().equals("||")) {
-			b = new Binary();
+		Expression e = conjunction();
+		
+		while (token.getType().equals("Operator") && token.getValue().equals("||")) {
+			Operator op = new Operator(token.getValue());
+			match("Operator", "||");
+			Expression term2 = conjunction();
+			
+			Binary b = new Binary();
+			b.op = op;
 			b.term1 = e;
-			b.op = new Operator(token.getValue());
-			token = input.nextToken();
-			b.term2 = conjunction();
+			b.term2 = term2;
 			e = b;
 		}
+		
 		return e;
 	}
-
+	
+	// Conjunction = Equality { && Equality }
 	private Expression conjunction() {
-		// Conjunction --> Relation { && Relation }*
-		Binary b;
-		Expression e;
-		e = relation();
-		while (token.getValue().equals("&&")) {
-			b = new Binary();
-			// TODO TO BE COMPLETED
+		Expression e = equality();
+		
+		while (token.getType().equals("Operator") && token.getValue().equals("&&")) {
+			Operator op = new Operator(token.getValue());
+			match("Operator", "&&");
+			Expression term2 = equality();
+			
+			Binary b = new Binary();
+			b.op = op;
+			b.term1 = e;
+			b.term2 = term2;
 			e = b;
 		}
+		
 		return e;
 	}
-
+	
+	// Equality = Relation [ EquOp Relation ]
+	private Expression equality() {
+		Expression e = relation();
+		
+		while (token.getType().equals("Operator") && 
+		       (token.getValue().equals("==") || token.getValue().equals("!="))) {
+			Operator op = new Operator(token.getValue());
+			String opValue = token.getValue();
+			match("Operator", opValue);
+			Expression term2 = relation();
+			
+			Binary b = new Binary();
+			b.op = op;
+			b.term1 = e;
+			b.term2 = term2;
+			e = b;
+		}
+		
+		return e;
+	}
+	
+	// Relation = Addition [ RelOp Addition ]
 	private Expression relation() {
-		// Relation --> Addition [ < | <= | > | >= | == | != ] Addition }*
-		Binary b;
-		Expression e;
-		e = addition();
-		// TODO TO BE CHECKED AND COMPLETED. Do we have all the operators? 
-		while (token.getValue().equals("<") || token.getValue().equals("<=")
-				|| token.getValue().equals(">=")
-				|| token.getValue().equals("==")
-				|| token.getValue().equals("!=")) {
-			b = new Binary();
-			// TODO TO BE COMPLETED
+		Expression e = addition();
+		
+		while (token.getType().equals("Operator") && 
+		       (token.getValue().equals("<") || token.getValue().equals("<=") ||
+		        token.getValue().equals(">") || token.getValue().equals(">=") ||
+		        token.getValue().equals("<>"))) {
+			Operator op = new Operator(token.getValue());
+			String opValue = token.getValue();
+			match("Operator", opValue);
+			Expression term2 = addition();
+			
+			Binary b = new Binary();
+			b.op = op;
+			b.term1 = e;
+			b.term2 = term2;
 			e = b;
 		}
+		
 		return e;
 	}
-
+	
+	// Addition = Term { AddOp Term }
 	private Expression addition() {
-		// Addition --> Term { [ + | - ] Term }*
-		Binary b;
-		Expression e;
-		e = term();
-		while (token.getValue().equals("+") || token.getValue().equals("-")) {
-			// TODO TO BE COMPLETED
-		}
-		return e;
-	}
-
-	private Expression term() {
-		// Term --> Negation { [ '*' | / ] Negation }*
-		Binary b;
-		Expression e;
-		e = negation();
-		while (token.getValue().equals("*") || token.getValue().equals("/")) {
-			b = new Binary();
-			// TODO TO BE COMPLETED
+		Expression e = term();
+		
+		while (token.getType().equals("Operator") && 
+		       (token.getValue().equals("+") || token.getValue().equals("-"))) {
+			Operator op = new Operator(token.getValue());
+			String opValue = token.getValue();
+			match("Operator", opValue);
+			Expression term2 = term();
+			
+			Binary b = new Binary();
+			b.op = op;
+			b.term1 = e;
+			b.term2 = term2;
 			e = b;
 		}
+		
 		return e;
 	}
-
-	private Expression negation() {
-		// Negation --> { ! }opt Factor
-		Unary u;
-		if (token.getValue().equals("!")) {
-			u = new Unary();
-			u.op = new Operator(token.getValue());
-			token = input.nextToken();
-			u.term = factor();
-			return u;
-		} else
-			return factor();
+	
+	// Term = Factor { MulOp Factor }
+	private Expression term() {
+		Expression e = factor();
+		
+		while (token.getType().equals("Operator") && 
+		       (token.getValue().equals("*") || token.getValue().equals("/"))) {
+			Operator op = new Operator(token.getValue());
+			String opValue = token.getValue();
+			match("Operator", opValue);
+			Expression term2 = factor();
+			
+			Binary b = new Binary();
+			b.op = op;
+			b.term1 = e;
+			b.term2 = term2;
+			e = b;
+		}
+		
+		return e;
 	}
-
+	
+	// Factor = [ UnaryOp ] Primary
 	private Expression factor() {
-		// TODO CHECK THE CODE BELOW
-		// Factor --> Identifier | Literal | ( Expression )
-		Expression e = null;
+		if (token.getType().equals("Operator") && 
+		    (token.getValue().equals("!") || token.getValue().equals("-"))) {
+			Operator op = new Operator(token.getValue());
+			String opValue = token.getValue();
+			match("Operator", opValue);
+			Expression term = primary();
+			
+			Unary u = new Unary();
+			u.op = op;
+			u.term = term;
+			return u;
+		} else {
+			return primary();
+		}
+	}
+	
+	// Primary = Identifier | Literal | ( Expression )
+	private Expression primary() {
+		Expression e;
+		
 		if (token.getType().equals("Identifier")) {
 			Variable v = new Variable();
 			v.id = token.getValue();
+			match("Identifier");
 			e = v;
-			token = input.nextToken();
 		} else if (token.getType().equals("Literal")) {
-			Value v = null;
-			if (isInteger(token.getValue()))
-				v = new Value((new Integer(token.getValue())).intValue());
-			else if (token.getValue().equals("True"))
-				v = new Value(true);
-			else if (token.getValue().equals("False"))
-				v = new Value(false);
-			else
-				throw new RuntimeException(SyntaxError("Literal"));
-			e = v;
-			token = input.nextToken();
+			e = literal();
 		} else if (token.getValue().equals("(")) {
-			token = input.nextToken();
+			match("Separator", "(");
 			e = expression();
-			match(")");
-		} else
-			throw new RuntimeException(SyntaxError("Identifier | Literal | ("));
+			match("Separator", ")");
+		} else {
+			throw new RuntimeException("Syntax error in primary expression - saw: " + 
+			                         token.getType() + " = " + token.getValue());
+		}
+		
 		return e;
 	}
-
-	private Conditional ifStatement() {
-		// IfStatement --> if ( Expression ) Statement { else Statement }opt
-		Conditional c = new Conditional();
-		// TODO TO BE COMPLETED
-		return c;
-	}
-
-	private Loop whileStatement() {
-		// WhileStatement --> while ( Expression ) Statement
-		Loop l = new Loop();
-		// TODO TO BE COMPLETED
-		return l;
-	}
-
-	private boolean isInteger(String s) {
-		boolean result = true;
-		for (int i = 0; i < s.length(); i++)
-			if ('0' > s.charAt(i) || '9' < s.charAt(i))
-				result = false;
-		return result;
+	
+	// Literal = IntegerLiteral | BooleanLiteral
+	private Value literal() {
+		Value v;
+		
+		if (token.getValue().equals("True")) {
+			v = new Value(true);
+			match("Literal", "True");
+		} else if (token.getValue().equals("False")) {
+			v = new Value(false);
+			match("Literal", "False");
+		} else {
+			// Integer literal
+			int intValue = Integer.parseInt(token.getValue());
+			v = new Value(intValue);
+			match("Literal");
+		}
+		
+		return v;
 	}
 }
