@@ -83,13 +83,13 @@ public class TokenStream {
 				}
 				return t;
 			case '=':
-				// ==
+				// == or single = (which is Other/invalid in KAY)
 				nextChar = readChar();
 				if (nextChar == '=') {
 					t.setValue(t.getValue() + nextChar);
 					nextChar = readChar();
 				} else {
-					// Single '=' is not a valid operator in KAY, mark as Other
+					// Single '=' is not a valid operator in KAY
 					t.setType("Other");
 				}
 				return t;
@@ -142,7 +142,7 @@ public class TokenStream {
 			}
 		}
 
-		// Then check for a separator (including comma)
+		// Then check for a separator (including comma for multi-variable declarations)
 		if (isSeparator(nextChar)) {
 			t.setType("Separator");
 			t.setValue(t.getValue() + nextChar);
