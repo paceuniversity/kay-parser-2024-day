@@ -1,4 +1,5 @@
 package com.scanner.project;
+
 // ConcreteSyntax.java
 
 // Implements the parser for KAY language
@@ -54,23 +55,33 @@ public class ConcreteSyntax {
 		// Keep reading declarations while we see type keywords
 		while (token.getType().equals("Keyword") && 
 		       (token.getValue().equals("integer") || token.getValue().equals("bool"))) {
-			Declaration d = declaration();
+			// Get the type first
+			Type t = type();
+			
+			// Now handle one or more identifiers separated by commas
+			// First identifier
+			Declaration d = new Declaration();
+			d.t = t;
+			d.v = new Variable();
+			d.v.id = token.getValue();
+			match("Identifier");
 			ds.add(d);
+			
+			// Check for more identifiers separated by commas
+			while (token.getType().equals("Separator") && token.getValue().equals(",")) {
+				match("Separator", ",");
+				Declaration d2 = new Declaration();
+				d2.t = t;
+				d2.v = new Variable();
+				d2.v.id = token.getValue();
+				match("Identifier");
+				ds.add(d2);
+			}
+			
+			match("Separator", ";");
 		}
 		
 		return ds;
-	}
-	
-	// Declaration = Type Identifier ;
-	private Declaration declaration() {
-		Declaration d = new Declaration();
-		d.t = type();
-		d.v = new Variable();
-		d.v.id = token.getValue();
-		match("Identifier");
-		match("Separator", ";");
-		
-		return d;
 	}
 	
 	// Type = integer | bool
