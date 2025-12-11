@@ -46,7 +46,7 @@ public class ConcreteSyntax {
 		while (token.getValue().equals("integer") || token.getValue().equals("bool")) {
 			declaration(ds);
 		}
-		return ds;		
+		return ds;
 	}
 
 	// single declaration line
@@ -300,5 +300,4 @@ public class ConcreteSyntax {
 				result = false;
 		return result;
 	}
-
 }
